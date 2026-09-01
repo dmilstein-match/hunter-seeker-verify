@@ -70,11 +70,18 @@ def fetch_jwks(url: str = JWKS_URL, timeout: float = 5.0) -> dict:
 
 def verify(verdict: Mapping[str, Any], signature: Mapping[str, str], *,
            jwks: Optional[Mapping[str, Any]] = None, now: Optional[datetime] = None) -> str:
+    # OUTSIDE the try, deliberately. A JWKS that cannot be fetched is a transport failure, not
+    # a verification result: swallowing it into the uniform "invalid_signature" below told the
+    # caller a genuine Verdict was FORGED because their DNS was down — the one error that
+    # makes an auditor reject a real decision. The four-word contract describes what the
+    # verifier concluded about the Verdict; it has no word for "I could not reach the keys",
+    # so that stays an exception the caller can see.
+    if jwks is None:
+        jwks = fetch_jwks()
     try:
         header = json.loads(_b64u(signature["protected"]))
         if header.get("alg") != "EdDSA" or header.get("b64") is not False:
             return "invalid_signature"
-        jwks = jwks or fetch_jwks()
         key = next((k for k in jwks.get("keys", []) if k.get("kid") == header.get("kid")), None)
         if key is None:
             return "unknown_key"

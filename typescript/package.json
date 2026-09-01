@@ -21,13 +21,15 @@
   },
   "files": [
     "dist",
-    "src",
     "README.md"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/hunter-seeker/hunter-seeker-verify",
+    "url": "git+https://github.com/dmilstein-match/hunter-seeker-verify.git",
     "directory": "typescript"
   },
-  "homepage": "https://hunter-seeker.net/for-agents"
+  "homepage": "https://github.com/dmilstein-match/hunter-seeker-verify",
+  "bugs": {
+    "url": "https://github.com/dmilstein-match/hunter-seeker-verify/issues"
+  }
 }

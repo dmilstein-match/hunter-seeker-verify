@@ -5,11 +5,11 @@ description = "Keyless verification of Hunter-Seeker Verdicts (Ed25519 detached 
 requires-python = ">=3.10"
 dependencies = ["cryptography>=42"]
 license = {text = "Apache-2.0"}
-readme = "../README.md"
+readme = "README.md"
 
 [project.urls]
-Homepage = "https://hunter-seeker.net/for-agents"
-Source = "https://github.com/hunter-seeker/hunter-seeker-verify"
+Homepage = "https://github.com/dmilstein-match/hunter-seeker-verify"
+Source = "https://github.com/dmilstein-match/hunter-seeker-verify"
 JWKS = "https://hunter-seeker.net/.well-known/jwks.json"
 
 [project.scripts]

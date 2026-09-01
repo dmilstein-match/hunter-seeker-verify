@@ -67,12 +67,18 @@ export async function verify(
   signature: Signature,
   opts: { jwks?: Jwks; now?: Date } = {},
 ): Promise<Status> {
+  // OUTSIDE the try, and matching hs_verify. A JWKS that cannot be fetched is a transport
+  // failure, not a verification result: swallowing it into the uniform "invalid_signature"
+  // below tells the caller a genuine Verdict was FORGED because their network was down — the
+  // one error that makes an auditor reject a real decision. The four-word contract says what
+  // the verifier concluded about the Verdict; it has no word for "I could not reach the keys",
+  // so that stays a thrown error the caller can see.
+  const jwks = opts.jwks ?? (await fetchJwks());
   let kid: string | undefined;
   try {
     const header = JSON.parse(Buffer.from(b64u(signature.protected)).toString("utf8"));
     if (header.alg !== "EdDSA" || header.b64 !== false) return "invalid_signature";
     kid = header.kid;
-    const jwks = opts.jwks ?? (await fetchJwks());
     const key = jwks.keys.find((k) => k.kid === kid);
     if (!key) return "unknown_key";
     const pub = await webcrypto.subtle.importKey("jwk", { kty: "OKP", crv: "Ed25519", x: key.x }, { name: "Ed25519" }, false, ["verify"]);
