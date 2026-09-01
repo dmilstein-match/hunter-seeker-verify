@@ -1,0 +1,33 @@
+{
+  "name": "@hunter-seeker/verify",
+  "version": "0.1.0",
+  "description": "Keyless verification of Hunter-Seeker Verdicts (Ed25519 detached JWS over RFC 8785 JCS). Zero dependencies.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.0"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hunter-seeker/hunter-seeker-verify",
+    "directory": "typescript"
+  },
+  "homepage": "https://hunter-seeker.net/for-agents"
+}

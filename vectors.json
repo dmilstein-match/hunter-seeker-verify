@@ -1,0 +1,64 @@
+{
+ "jwks": {
+  "keys": [
+   {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "kid": "vec-2026",
+    "use": "sig",
+    "alg": "EdDSA",
+    "x": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg"
+   }
+  ]
+ },
+ "canonical": "{\"entities\":[{\"band\":\"act\",\"entity_id\":\"acct_4419\",\"score\":0.838}],\"expires_at\":\"2099-01-01T00:00:00Z\",\"kind\":\"entity_score\",\"nested\":{\"a\":[1,2.5e-7],\"z\":1},\"score\":0.838459582524457,\"verdict_id\":\"01J6XTESTVECTOR\"}",
+ "payload": {
+  "verdict_id": "01J6XTESTVECTOR",
+  "kind": "entity_score",
+  "score": 0.838459582524457,
+  "entities": [
+   {
+    "entity_id": "acct_4419",
+    "score": 0.838,
+    "band": "act"
+   }
+  ],
+  "nested": {
+   "z": 1,
+   "a": [
+    1.0,
+    2.5e-07
+   ]
+  },
+  "expires_at": "2099-01-01T00:00:00Z"
+ },
+ "signature": {
+  "protected": "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il0sImtpZCI6InZlYy0yMDI2IiwidHlwIjoiaHMtdmVyZGljdCtqc29uIn0",
+  "signature": "p-TG08pPrZjEZLOmGq8KoWtzA-iCRDSifbv-mg9G4HUELIylF0XvqS2qGbt5qhnIqRtjCrMf3i9YWPSR3SiEDw",
+  "kid": "vec-2026"
+ },
+ "tampered": {
+  "verdict_id": "01J6XTESTVECTOR",
+  "kind": "entity_score",
+  "score": 0.9,
+  "entities": [
+   {
+    "entity_id": "acct_4419",
+    "score": 0.838,
+    "band": "act"
+   }
+  ],
+  "nested": {
+   "z": 1,
+   "a": [
+    1.0,
+    2.5e-07
+   ]
+  },
+  "expires_at": "2099-01-01T00:00:00Z"
+ },
+ "expected": {
+  "valid": "valid",
+  "tampered": "invalid_signature"
+ }
+}
