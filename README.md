@@ -10,7 +10,7 @@
 > | `pip install hs-verify` / `npm install @hunter-seeker/verify` | not on PyPI / npm yet — install from this repo |
 > | `pip install hunter-seeker` | not on PyPI yet — install from this repo |
 > | `https://hunter-seeker.net/api/mcp` and `/.well-known/jwks.json` | not serving yet |
-> | `vectors.json` | signed with a **pre-release test key**, not the production one. Run `python scripts/check_live.py --vectors` and it will say so |
+> | `vectors.json` | signed with the **production key** (`kid` `2026-q3`). `python scripts/check_live.py --vectors` reports `LIVE` |
 >
 > Everything offline works now: both verifiers agree byte for byte on the shared vectors, and
 > the canonical form and the signature check are the ones production will use. What is waiting
