@@ -1,0 +1,30 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install cryptography pytest
+      - run: cd python && python -m pytest -q
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: cd typescript && npm ci --ignore-scripts || true
+      - run: cd typescript && npm test
+      - run: cd typescript && npx --yes -p typescript@5 -p @types/node@22 tsc -p tsconfig.json
+  vectors-are-live:
+    # Fails until vectors.json is re-cut with a production kid. Make this job required before v1.0.0.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install cryptography
+      - run: python scripts/check_live.py --vectors
