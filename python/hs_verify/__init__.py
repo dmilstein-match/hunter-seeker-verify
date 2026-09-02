@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import math
 import urllib.request
 from datetime import datetime, timezone
@@ -63,7 +64,16 @@ def _b64u(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
 
 
-def fetch_jwks(url: str = JWKS_URL, timeout: float = 5.0) -> dict:
+def fetch_jwks(url: Optional[str] = None, timeout: float = 5.0) -> dict:
+    """Fetch the published keys. `url` defaults to HS_JWKS_URL, else JWKS_URL.
+
+    Resolved at CALL time, not bound as a default argument: a default binds the value at import,
+    so `hs_verify.JWKS_URL = ...` silently did nothing and the library kept fetching the public
+    host. Anyone self-hosting an engine, or testing against a staging one, hits that — and it
+    fails as a 404 that looks like the service being down rather than like a setting being
+    ignored.
+    """
+    url = url or os.environ.get("HS_JWKS_URL") or JWKS_URL
     with urllib.request.urlopen(url, timeout=timeout) as r:  # noqa: S310 - https, fixed host
         return json.load(r)
 
