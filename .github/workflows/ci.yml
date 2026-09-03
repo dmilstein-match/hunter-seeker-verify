@@ -19,9 +19,11 @@ jobs:
       - run: cd typescript && npm test
       - run: cd typescript && npx --yes -p typescript@5 -p @types/node@22 tsc -p tsconfig.json
   vectors-are-live:
-    # Fails until vectors.json is re-cut with a production kid. Make this job required before v1.0.0.
+    # REQUIRED. vectors.json is cut with the production kid, and vectors.json now also carries a
+    # real production Verdict (the `live` section) that the libraries verify offline. Allowing
+    # this to fail would let the published vectors drift back to a test key without anyone
+    # noticing — and a reviewer holding a real Verdict would be the one to find out.
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
