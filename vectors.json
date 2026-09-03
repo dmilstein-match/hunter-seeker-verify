@@ -13,8 +13,8 @@
     "nested": {
       "z": 1,
       "a": [
-        1.0,
-        2.5e-07
+        1,
+        2.5e-7
       ]
     },
     "expires_at": "2099-01-01T00:00:00Z"
@@ -51,8 +51,8 @@
     "nested": {
       "z": 1,
       "a": [
-        1.0,
-        2.5e-07
+        1,
+        2.5e-7
       ]
     },
     "expires_at": "2099-01-01T00:00:00Z"
@@ -60,5 +60,77 @@
   "expected": {
     "valid": "valid",
     "tampered": "invalid_signature"
+  },
+  "live": {
+    "_comment": [
+      "A REAL Verdict, cut from a live hs_score_entity against sample:b2b_leads on engine 0.3.3,",
+      "and signed by the production key (kid 2026-q3). `payload` above stays SYNTHETIC on purpose:",
+      "it carries the JSON-canonicalisation edge cases (1.0 -> 1, 2.5e-07 -> 2.5e-7, unsorted keys)",
+      "that a real Verdict does not happen to contain, and a far-future expires_at so the",
+      "unpinned `valid` assertion never becomes time-dependent.",
+      "This section is the other half: proof the same code path accepts what production actually",
+      "emits. It carries a REAL expires_at (2026-12-02), so its `valid` check MUST be evaluated at",
+      "verify_at — a pinned instant inside the validity window. Asserting it unpinned would turn",
+      "this suite red on 2026-12-02 for no reason but the calendar."
+    ],
+    "verify_at": "2026-09-03T01:00:00Z",
+    "verdict": {
+      "verdict_id": "01M1JBXJDRYG8Z4M2Q9S4037A0",
+      "kind": "entity_score",
+      "analysis_id": "sk1_4cee6f5aeb4f3428d9426b812623a980",
+      "model_ref": "mr1_155b581a542c26482af1341932fed2b0",
+      "ranking_ref": null,
+      "engine_version": "0.3.3",
+      "core_hash": "4d24e9fcfe4d6d42a4ece61ac02e72ef0b584b5304d204c9e6896cdad9ecfe0d",
+      "contract_hash": "4f81b7ff7fe535201afe92c6c47c3eeeab6c4510c0378ac6c7d25d07d68c1871",
+      "tool_contract_version": "2.0.0",
+      "dataset_content_hash": "18c10214f89639ac13fff0eb785ca0f6",
+      "spec_hash": "sp1_c80a3112898eec5db97d8e7f2fb5d16d",
+      "computed_at": "2026-09-03T00:50:20Z",
+      "expires_at": "2026-12-02T00:24:38Z",
+      "issuer": "hunter-seeker.net",
+      "on_behalf_of": {
+        "principal_id": "user_3FvlWu2blHLFGgLSjhWFDnM01gV",
+        "principal_type": "user",
+        "source": "oauth"
+      },
+      "agent": {
+        "client_id": "4iyQblL0nPgVfLlc"
+      },
+      "outcome": {
+        "column": "converted",
+        "polarity": "desirable"
+      },
+      "subject_kind": "org",
+      "acknowledge_decision_support": false,
+      "trust": {
+        "realised_lift": 7.346938775510204,
+        "top_decile_lift": 5.263158,
+        "validation": {
+          "scheme": "holdout"
+        }
+      },
+      "entities": [
+        {
+          "entity_id": "lead_probe_1",
+          "score": 0.625616486194775,
+          "band": "act",
+          "band_reason": "certified",
+          "max_autonomy": "L2",
+          "principal_reasons": []
+        }
+      ],
+      "honest_empty": null,
+      "provenance_class": "finding"
+    },
+    "signature": {
+      "protected": "eyJhbGciOiJFZERTQSIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il0sImtpZCI6IjIwMjYtcTMiLCJ0eXAiOiJocy12ZXJkaWN0K2pzb24ifQ",
+      "signature": "FDERKRHM6Bacexbq1qN5SjEo9Uve1tgyNhEEQuit-e03PPQFgyD_gQmVrpqWlN4NV-R0yUs59AdNyJ8911PYBA",
+      "kid": "2026-q3"
+    },
+    "expected": {
+      "valid": "valid",
+      "expired_after_window": "expired"
+    }
   }
 }
