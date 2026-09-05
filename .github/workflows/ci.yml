@@ -3,12 +3,39 @@ on: [push, pull_request]
 jobs:
   python:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.10 is the DECLARED floor in pyproject.toml, and it is the only leg that can catch the
+        # class of bug that shipped in 0.1.0: `urllib` gained 308 support in 3.11 (bpo-40321), so a
+        # JWKS URL that redirects works on 3.12 and raises on 3.10. A 3.12-only matrix is exactly
+        # why nobody saw it. If the floor moves, move this with it.
+        python-version: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "${{ matrix.python-version }}" }
       - run: pip install cryptography pytest
       - run: cd python && python -m pytest -q
+
+  jwks-resolves-on-the-floor:
+    # The offline vectors cannot catch a bad JWKS_URL, because they never fetch one. This does:
+    # it resolves the shipped default on the OLDEST supported Python, so a redirecting or moved
+    # host fails here rather than in a user's terminal.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.10" }
+      - run: pip install cryptography
+      - run: |
+          cd python && python -c "
+          from hs_verify import fetch_jwks, JWKS_URL
+          print('fetching', JWKS_URL)
+          kids = [k['kid'] for k in fetch_jwks()['keys']]
+          assert kids, 'JWKS served no keys'
+          print('kids:', kids)
+          "
   typescript:
     runs-on: ubuntu-latest
     steps:

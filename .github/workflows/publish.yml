@@ -1,0 +1,74 @@
+name: publish
+
+# Tag-driven. `git tag v0.2.0 && git push --tags` publishes BOTH packages at whatever version the
+# manifests declare — the tag does not set the version, it only triggers. The guard job below
+# refuses to publish if the tag and the manifests disagree, because a tag that says one thing while
+# npm receives another is the kind of mismatch nobody notices until they are diffing a supply chain.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  # ── the tag must mean what it says ──────────────────────────────────────────────────────────
+  versions-agree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: tag == pyproject == package.json
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          PY=$(grep -m1 '^version = ' python/pyproject.toml | cut -d'"' -f2)
+          TS=$(node -p "require('./typescript/package.json').version")
+          echo "tag=$TAG  pyproject=$PY  package.json=$TS"
+          test "$TAG" = "$PY" || { echo "::error::tag $TAG != pyproject $PY"; exit 1; }
+          test "$TAG" = "$TS" || { echo "::error::tag $TAG != package.json $TS"; exit 1; }
+
+  # ── npm, with provenance ────────────────────────────────────────────────────────────────────
+  # Provenance is a signed SLSA statement binding the tarball to THIS workflow run. It can only be
+  # produced by a supported CI with an OIDC identity — `npm publish --provenance` from a laptop
+  # fails by design. That is the whole point: the attestation says a machine built it from this
+  # commit, which a local publish cannot honestly claim.
+  npm:
+    needs: versions-agree
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write        # REQUIRED for provenance; without it npm errors rather than degrading
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci --ignore-scripts || npm install --ignore-scripts
+        working-directory: typescript
+      - run: npm test
+        working-directory: typescript
+      - run: npm publish --provenance --access public
+        working-directory: typescript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ── PyPI, with PEP 740 attestations ─────────────────────────────────────────────────────────
+  # Trusted Publishing: no API token in the repo at all. PyPI must be told to trust this repo +
+  # this workflow filename first; until then this job fails with "not a trusted publisher", which
+  # is the correct failure — it is refusing to publish an unattested artifact.
+  pypi:
+    needs: versions-agree
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write        # REQUIRED for Trusted Publishing and for the attestations
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install build
+      - run: cd python && python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: python/dist
+          attestations: true
