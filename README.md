@@ -7,9 +7,9 @@
 >
 > | Thing the docs below tell you to use | Reality today |
 > |---|---|
-> | `pip install hs-verify` / `npm install @hunter-seeker/verify` | not on PyPI / npm yet — install from this repo |
-> | `pip install hunter-seeker` | not on PyPI yet — install from this repo |
-> | `https://hunter-seeker.net/api/mcp` and `/.well-known/jwks.json` | not serving yet |
+> | `pip install hs-verify` / `npm install @hunter-seeker/verify` | **published** — 0.2.0 on PyPI and npm |
+> | `pip install hunter-seeker` | **published** on PyPI |
+> | `https://hunter-seeker.io/api/mcp` and `/.well-known/jwks.json` | **live** — the apex is canonical; `hunter-seeker.net` 308s to it |
 > | `vectors.json` | signed with the **production key** (`kid` `2026-q3`). `python scripts/check_live.py --vectors` reports `LIVE` |
 >
 > Everything offline works now: both verifiers agree byte for byte on the shared vectors, and
@@ -40,7 +40,7 @@ pip install hs-verify
 ```
 ```python
 from hs_verify import verify
-verify(verdict, signature)              # fetches https://hunter-seeker.net/.well-known/jwks.json
+verify(verdict, signature)              # fetches https://hunter-seeker.io/.well-known/jwks.json
 verify(verdict, signature, jwks=jwks)   # offline
 ```
 ```bash
@@ -97,7 +97,7 @@ compares the vector `kid` against the live JWKS and tells you which you are hold
 
 ## Security
 
-Report issues to security@hunter-seeker.net. Please do not open public issues for
+Report issues to security@hunter-seeker.io. Please do not open public issues for
 signature-bypass reports.
 
 Apache-2.0.

@@ -1,6 +1,6 @@
 {
   "name": "@hunter-seeker/verify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keyless verification of Hunter-Seeker Verdicts (Ed25519 detached JWS over RFC 8785 JCS). Zero dependencies.",
   "type": "module",
   "main": "dist/index.js",

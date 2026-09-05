@@ -10,7 +10,7 @@
  */
 import { webcrypto } from "node:crypto";
 
-export const JWKS_URL = "https://hunter-seeker.net/.well-known/jwks.json";
+export const JWKS_URL = "https://hunter-seeker.io/.well-known/jwks.json";
 export type Status = "valid" | "invalid_signature" | "expired" | "unknown_key";
 export type Jwks = { keys: Array<{ kid: string; kty: string; crv: string; x: string; alg?: string }> };
 export type Signature = { protected: string; signature: string; kid?: string };

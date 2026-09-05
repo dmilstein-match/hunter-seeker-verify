@@ -1,6 +1,6 @@
 [project]
 name = "hs-verify"
-version = "0.1.0"
+version = "0.2.0"
 description = "Keyless verification of Hunter-Seeker Verdicts (Ed25519 detached JWS over RFC 8785 JCS)."
 requires-python = ">=3.10"
 dependencies = ["cryptography>=42"]
@@ -10,7 +10,7 @@ readme = "README.md"
 [project.urls]
 Homepage = "https://github.com/dmilstein-match/hunter-seeker-verify"
 Source = "https://github.com/dmilstein-match/hunter-seeker-verify"
-JWKS = "https://hunter-seeker.net/.well-known/jwks.json"
+JWKS = "https://hunter-seeker.io/.well-known/jwks.json"
 
 [project.scripts]
 hs-verify = "hs_verify:main"

@@ -20,7 +20,7 @@ from typing import Any, Mapping, Optional
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-JWKS_URL = "https://hunter-seeker.net/.well-known/jwks.json"
+JWKS_URL = "https://hunter-seeker.io/.well-known/jwks.json"
 __all__ = ["verify", "canonicalize", "fetch_jwks", "JWKS_URL"]
 
 _ESC = {'"': '\\"', "\\": "\\\\", "\b": "\\b", "\f": "\\f", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
