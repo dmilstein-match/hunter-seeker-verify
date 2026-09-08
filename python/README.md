@@ -22,8 +22,14 @@ Ed25519 detached JWS (RFC 7797, `b64:false`) over RFC 8785 canonical JSON. The T
 twin — `@hunter-seeker/verify` — tests against the same vectors, which is how the two are
 proven interoperable.
 
-**Pre-release:** the hosted JWKS is not serving yet and the committed test vectors are signed
-with a pre-release key. Full status, trust model and vectors:
+**Key rotation and caching.** Keys rotate every 90 days and **retired public keys stay published**,
+so a Verdict signed two quarters ago still verifies. Each signature names its `kid`; match on that
+rather than assuming one key. For offline or air-gapped verification, cache the JWKS and pin the
+`kid` you need — `fetch_jwks(url)` takes an explicit URL and `HS_JWKS_URL` overrides the default,
+so a local copy is a one-line change. Refresh the cache when you meet an unknown `kid`, not on a
+timer.
+
+Full status, trust model and vectors:
 https://github.com/dmilstein-match/hunter-seeker-verify
 
 Apache-2.0.

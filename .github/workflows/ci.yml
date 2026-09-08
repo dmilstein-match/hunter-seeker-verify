@@ -32,9 +32,16 @@ jobs:
           cd python && python -c "
           from hs_verify import fetch_jwks, JWKS_URL
           print('fetching', JWKS_URL)
-          kids = [k['kid'] for k in fetch_jwks()['keys']]
+          kids = set(k['kid'] for k in fetch_jwks()['keys'])
           assert kids, 'JWKS served no keys'
-          print('kids:', kids)
+          # Retired keys STAY published, so every kid that ever signed a Verdict people still
+          # hold must remain servable. Asserting only that the list is non-empty let a rotation
+          # that dropped an old kid pass green while every Verdict signed with it began
+          # returning unknown_key. Add each new kid here as it is minted; never remove one.
+          HISTORICAL = {'2026-q3'}
+          missing = HISTORICAL - kids
+          assert not missing, f'retired kid(s) no longer served: {sorted(missing)} (served: {sorted(kids)})'
+          print('kids:', sorted(kids))
           "
   typescript:
     runs-on: ubuntu-latest
@@ -57,3 +64,47 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install cryptography
       - run: python scripts/check_live.py --vectors
+
+  registry-installs-clean:
+    # The gate that was missing. Every job above builds from the CHECKOUT, so all of them stayed
+    # green for the whole time PyPI and npm served 0.1.0 — pointing at hunter-seeker.net, which
+    # 308-redirects, which urllib does not follow before 3.11 while pyproject declares >=3.10. The
+    # repo said 0.2.0 and the README said published; neither was true, and nothing could tell.
+    #
+    # This installs what a USER installs and asserts it matches this checkout. On the declared
+    # floor, so a redirect the floor cannot follow is a red build here rather than a stack trace
+    # in an auditor's terminal.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.10" }
+      - name: PyPI package matches this checkout
+        run: |
+          WANT_V=$(grep -m1 '^version' python/pyproject.toml | cut -d'"' -f2)
+          WANT_U=$(grep -m1 '^JWKS_URL' python/hs_verify/__init__.py | cut -d'"' -f2)
+          pip install --quiet hs-verify
+          cd /tmp && python -c "
+          import hs_verify
+          from importlib.metadata import version
+          got_v, got_u = version('hs-verify'), hs_verify.JWKS_URL
+          print('installed', got_v, got_u)
+          assert got_v == '$WANT_V', f'PyPI serves {got_v}, this repo is $WANT_V'
+          assert got_u == '$WANT_U', f'PyPI serves {got_u}, this repo is $WANT_U'
+          hs_verify.fetch_jwks()   # and the URL it ships must actually resolve on the floor
+          "
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: npm package matches this checkout
+        run: |
+          WANT_V=$(node -p "require('./typescript/package.json').version")
+          WANT_U=$(grep -m1 'export const JWKS_URL' typescript/src/index.ts | cut -d'"' -f2)
+          cd /tmp && npm install --silent @hunter-seeker/verify
+          node --input-type=module -e "
+          import { JWKS_URL } from '@hunter-seeker/verify';
+          import { readFileSync } from 'node:fs';
+          const v = JSON.parse(readFileSync('/tmp/node_modules/@hunter-seeker/verify/package.json','utf8')).version;
+          console.log('installed', v, JWKS_URL);
+          if (v !== '$WANT_V') throw new Error(\`npm serves \${v}, this repo is $WANT_V\`);
+          if (JWKS_URL !== '$WANT_U') throw new Error(\`npm serves \${JWKS_URL}, this repo is $WANT_U\`);
+          "

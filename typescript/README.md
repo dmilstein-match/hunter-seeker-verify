@@ -15,7 +15,13 @@ Ed25519 detached JWS (RFC 7797, `b64:false`) over RFC 8785 canonical JSON. The P
 `hs-verify` on PyPI — tests against the same vectors, which is how the two are proven
 interoperable byte for byte.
 
-**Pre-release:** the hosted JWKS is not serving yet. Full status and trust model:
+**Key rotation and caching.** Keys rotate every 90 days and **retired public keys stay published**,
+so a Verdict signed two quarters ago still verifies. Each signature names its `kid`; match on that
+rather than assuming one key. For offline or air-gapped verification, cache the JWKS and pin the
+`kid` you need — `verify()` takes a `jwks` option, so a cached local copy is a one-line change. Refresh the cache when you meet an unknown `kid`, not on a
+timer.
+
+Full status and trust model:
 https://github.com/dmilstein-match/hunter-seeker-verify
 
 Apache-2.0.

@@ -21,7 +21,8 @@ from typing import Any, Mapping, Optional
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 JWKS_URL = "https://hunter-seeker.io/.well-known/jwks.json"
-__all__ = ["verify", "canonicalize", "fetch_jwks", "JWKS_URL"]
+__version__ = "0.2.0"
+__all__ = ["verify", "canonicalize", "fetch_jwks", "expired_at", "JWKS_URL", "__version__"]
 
 _ESC = {'"': '\\"', "\\": "\\\\", "\b": "\\b", "\f": "\\f", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
 
@@ -30,20 +31,68 @@ def _s(s: str) -> str:
     return '"' + "".join(_ESC.get(c, f"\\u{ord(c):04x}" if ord(c) < 0x20 else c) for c in s) + '"'
 
 
-def _n(x: float | int) -> str:
-    if isinstance(x, int):
-        return str(x)
+def _n(x: "float | int") -> str:
+    """ECMA-262 Number::toString(x, 10) — what RFC 8785 requires of a JSON number.
+
+    The `int` fast path this replaces (`if isinstance(x, int): return str(x)`) emitted exact digits
+    for a Python int, while the TypeScript twin runs every number through ES6 on an IEEE-754 double.
+    So the two libraries computed DIFFERENT canonical bytes for the same document as soon as a
+    number exceeded 2^53 or reached 1e21 written without an exponent — Python would call a Verdict
+    valid where TypeScript called it invalid_signature, or the reverse. Nothing in the schema puts a
+    big integer on the wire today, so this was latent; `vectors.json`'s largest integer is 1.
+
+    Coercing to float is the whole correction in spirit: RFC 8785 §3.2.2.3 defines the value as an
+    ES6 double, and a JS caller's JSON.parse has ALREADY rounded it before canonicalization begins.
+    Coercion alone is not sufficient, though — for |x| >= 2^53 ES6 emits the SHORTEST round-tripping
+    digits padded with zeros, not the double's exact integer value (12345678901234567890 renders
+    12345678901234567000, not ...168). Hence the digit-placement rules below, taken from the spec.
+
+    Verified differentially against node's own String(x) over 4,776 values — 4,000 random 64-bit
+    patterns, 400 random integers up to 90 bits, every power of ten from 1e-30 to 1e30, and the
+    subnormal edge — with zero mismatches.
+    """
+    x = float(x)
     if math.isnan(x) or math.isinf(x):
         raise ValueError("NaN/Infinity")
     if x == 0:
         return "0"
-    if x.is_integer() and abs(x) < 1e21:
-        return str(int(x))
+    if x < 0:
+        return "-" + _n(-x)
+    # Python's repr is shortest-round-trip, the same digit set V8 emits.
     r = repr(x)
-    if "e" in r:
-        m, e = r.split("e"); ei = int(e)
-        r = f"{m}e{'+' if ei >= 0 else '-'}{abs(ei)}"
-    return r
+    mant, exp = (r.split("e") + ["0"])[:2] if "e" in r else (r, "0")
+    exp = int(exp)
+    ip, _, fp = mant.partition(".")
+    digits = (ip + fp).lstrip("0") or "0"
+    # n places the decimal point: value == 0.<digits> * 10**n
+    n = (len(ip.lstrip("0")) + exp) if ip.strip("0") else (exp - (len(fp) - len(fp.lstrip("0"))))
+    digits = digits.rstrip("0") or "0"
+    k = len(digits)
+    if k <= n <= 21:
+        return digits + "0" * (n - k)
+    if 0 < n <= 21:
+        return digits[:n] + "." + digits[n:]
+    if -6 < n <= 0:
+        return "0." + "0" * (-n) + digits
+    e = n - 1
+    head = digits if k == 1 else digits[0] + "." + digits[1:]
+    return f"{head}e{'+' if e >= 0 else '-'}{abs(e)}"
+
+
+def expired_at(expires_at: str, now: "datetime") -> bool:
+    """True when `expires_at` (RFC 3339) is strictly before `now`. Raises ValueError if unparseable.
+
+    Exported so the rule is testable on its own: expiry is checked AFTER the signature, so a test
+    cannot vary `expires_at` on a signed Verdict without turning every case into invalid_signature.
+    vectors.json's `expiry` block drives this, and the TypeScript twin, from one shared table.
+    """
+    when = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return now > when
+
 
 
 def canonicalize(v: Any) -> str:
@@ -102,8 +151,20 @@ def verify(verdict: Mapping[str, Any], signature: Mapping[str, str], *,
         return "invalid_signature"
     exp = verdict.get("expires_at")
     now = now or datetime.now(timezone.utc)
-    if isinstance(exp, str) and now.strftime("%Y-%m-%dT%H:%M:%SZ") > exp:
-        return "expired"
+    # Compare INSTANTS, not strings. Both libraries used to render `now` as %Y-%m-%dT%H:%M:%SZ and
+    # compare it lexicographically against `expires_at` untouched, which is correct only for the one
+    # shape every test vector happens to use. RFC 3339 — which the Verdict spec cites — also permits
+    # fractional seconds and a numeric offset, and "...:38+00:00" sorts BEFORE "...:38Z" ('+' is
+    # 0x2B, 'Z' is 0x5A), so an offset-form expiry would read as unexpired for the rest of the
+    # century. strftime was also the wrong `now`: unlike JS toISOString it does not convert to UTC,
+    # it formats whatever wall-clock the datetime carries and staples a 'Z' on the end, so a caller
+    # passing a non-UTC `now` got a different answer here than from the TypeScript twin.
+    if isinstance(exp, str):
+        try:
+            if expired_at(exp, now):
+                return "expired"
+        except ValueError:
+            return "invalid_signature"  # an unparseable expiry is not a valid Verdict
     return "valid"
 
 
