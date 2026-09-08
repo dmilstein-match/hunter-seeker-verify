@@ -11,6 +11,7 @@
 import { webcrypto } from "node:crypto";
 
 export const JWKS_URL = "https://hunter-seeker.io/.well-known/jwks.json";
+export const VERSION = "0.2.0"; // kept in step with package.json by the versions-agree CI job
 export type Status = "valid" | "invalid_signature" | "expired" | "unknown_key";
 export type Jwks = { keys: Array<{ kid: string; kty: string; crv: string; x: string; alg?: string }> };
 export type Signature = { protected: string; signature: string; kid?: string };
@@ -31,6 +32,19 @@ function num(x: number): string {
   if (x === 0) return "0";
   return String(x); // ES6 Number#toString is what RFC 8785 specifies
 }
+
+/** True when `expiresAt` (RFC 3339) is strictly before `now`. NaN-safe: an unparseable value
+ *  throws, and verify() maps that to invalid_signature.
+ *
+ *  Exported so the rule is testable on its own: expiry is checked AFTER the signature, so a test
+ *  cannot vary expires_at on a signed Verdict without turning every case into invalid_signature.
+ *  vectors.json's `expiry` block drives this, and the Python twin, from one shared table. */
+export function expiredAt(expiresAt: string, now: Date): boolean {
+  const when = Date.parse(expiresAt);
+  if (Number.isNaN(when)) throw new Error("unparseable expires_at");
+  return now.getTime() > when;
+}
+
 
 /** RFC 8785 JSON Canonicalization Scheme. */
 export function canonicalize(v: unknown): string {
@@ -88,8 +102,18 @@ export async function verify(
   } catch {
     return "invalid_signature";
   }
+  // Compare INSTANTS, not strings. This used to render `now` as an ISO string and compare it
+  // lexicographically against `expires_at` untouched, which is correct only for the one shape every
+  // test vector happens to use. RFC 3339 — which the Verdict spec cites — also permits fractional
+  // seconds and a numeric offset, and "...:38+00:00" sorts BEFORE "...:38Z" ('+' is 0x2B, 'Z' is
+  // 0x5A), so an offset-form expiry read as unexpired for the rest of the century.
   const exp = verdict["expires_at"];
-  const now = (opts.now ?? new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
-  if (typeof exp === "string" && now > exp) return "expired";
+  if (typeof exp === "string") {
+    try {
+      if (expiredAt(exp, opts.now ?? new Date())) return "expired";
+    } catch {
+      return "invalid_signature"; // an unparseable expiry is not a valid Verdict
+    }
+  }
   return "valid";
 }

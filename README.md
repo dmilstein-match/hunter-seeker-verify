@@ -1,9 +1,8 @@
 # hunter-seeker-verify
 
-> ### Status: pre-release
+> ### Status: live
 >
-> The code here is complete and tested; the hosted service it talks to is not live yet.
-> Concretely, **today**:
+> The libraries and the hosted service they talk to are both live. Concretely, **today**:
 >
 > | Thing the docs below tell you to use | Reality today |
 > |---|---|
@@ -82,11 +81,13 @@ Both libraries test against the same file, which is how they are proven interope
 (cd typescript && npm test)
 ```
 
-The vectors are cut by the engine's release process. **The ones committed today are from a
-pre-release build, signed with a test key** — they prove the two libraries agree byte for byte,
-which is what they are for, but they are not a production artifact. They are re-cut with the
-live signing key when the engine publishes its JWKS. `python scripts/check_live.py --vectors`
-compares the vector `kid` against the live JWKS and tells you which you are holding.
+The vectors are cut by the engine's release process and **the committed set is signed with the
+production key** (`kid` `2026-q3`); `python scripts/check_live.py --vectors` compares the vector
+`kid` against the live JWKS and reports `LIVE`. Two blocks carry no signature on purpose —
+`canonical_only` and `expiry` — because neither rule is reachable from a signed payload: the
+signed one's largest number is `1`, and expiry is checked AFTER the signature, so varying
+`expires_at` would return `invalid_signature` and never reach the comparison. Both libraries
+drive those two tables, which is what keeps their number and time rules from drifting apart.
 
 ## Trust model
 

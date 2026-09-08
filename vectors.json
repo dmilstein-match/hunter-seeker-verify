@@ -14,7 +14,7 @@
       "z": 1,
       "a": [
         1,
-        2.5e-7
+        2.5e-07
       ]
     },
     "expires_at": "2099-01-01T00:00:00Z"
@@ -52,7 +52,7 @@
       "z": 1,
       "a": [
         1,
-        2.5e-7
+        2.5e-07
       ]
     },
     "expires_at": "2099-01-01T00:00:00Z"
@@ -70,7 +70,7 @@
       "unpinned `valid` assertion never becomes time-dependent.",
       "This section is the other half: proof the same code path accepts what production actually",
       "emits. It carries a REAL expires_at (2026-12-02), so its `valid` check MUST be evaluated at",
-      "verify_at — a pinned instant inside the validity window. Asserting it unpinned would turn",
+      "verify_at \u2014 a pinned instant inside the validity window. Asserting it unpinned would turn",
       "this suite red on 2026-12-02 for no reason but the calendar."
     ],
     "verify_at": "2026-09-03T01:00:00Z",
@@ -132,5 +132,138 @@
       "valid": "valid",
       "expired_after_window": "expired"
     }
+  },
+  "canonical_only": {
+    "_comment": "Canonicalization vectors with NO signature attached, so both suites can exercise the number rules directly. The signed `payload` above cannot cover them: its largest number is 1, and changing it would invalidate the signature. Each case is {name, value, canonical} and both libraries must render `value` to exactly `canonical`. The big-integer cases are the ones that mattered: Python special-cased int and emitted exact digits while TypeScript ran every number through ES6 on a double, so the two computed different bytes for the same document \u2014 one would have called a Verdict valid and the other invalid_signature.",
+    "cases": [
+      {
+        "name": "small int",
+        "value": 1,
+        "canonical": "1"
+      },
+      {
+        "name": "negative int",
+        "value": -1,
+        "canonical": "-1"
+      },
+      {
+        "name": "integral float renders as int",
+        "value": 1.0,
+        "canonical": "1"
+      },
+      {
+        "name": "small exponent",
+        "value": 2.5e-07,
+        "canonical": "2.5e-7"
+      },
+      {
+        "name": "real lift from a Verdict",
+        "value": 7.346938775510204,
+        "canonical": "7.346938775510204"
+      },
+      {
+        "name": "2^53 (last exact integer)",
+        "value": 9007199254740992,
+        "canonical": "9007199254740992"
+      },
+      {
+        "name": "2^53+1 rounds down",
+        "value": 9007199254740993,
+        "canonical": "9007199254740992"
+      },
+      {
+        "name": "big int uses SHORTEST digits, not the double's exact value",
+        "value": 12345678901234567890,
+        "canonical": "12345678901234567000"
+      },
+      {
+        "name": "1e21 written as digits goes exponential",
+        "value": 1000000000000000000000,
+        "canonical": "1e+21"
+      },
+      {
+        "name": "1e20 stays positional",
+        "value": 100000000000000000000,
+        "canonical": "100000000000000000000"
+      },
+      {
+        "name": "just under the exponent boundary",
+        "value": 999999999999999999999,
+        "canonical": "1e+21"
+      },
+      {
+        "name": "1e-7 goes exponential",
+        "value": 1e-07,
+        "canonical": "1e-7"
+      },
+      {
+        "name": "1e-6 stays positional",
+        "value": 1e-06,
+        "canonical": "0.000001"
+      },
+      {
+        "name": "subnormal",
+        "value": 1e-323,
+        "canonical": "1e-323"
+      },
+      {
+        "name": "zero",
+        "value": 0,
+        "canonical": "0"
+      }
+    ]
+  },
+  "expiry": {
+    "_comment": "Expiry cases. Both libraries used to build a `now` string and compare it LEXICOGRAPHICALLY against expires_at untouched \u2014 correct only for the fixed-width UTC shape every other vector here happens to use. RFC 3339, which the Verdict spec cites, also permits fractional seconds and a numeric offset; '+00:00' sorts before 'Z', so an offset-form expiry read as unexpired forever. These cannot ride on the signed payload above (expiry is checked AFTER the signature, so varying expires_at would return invalid_signature and never reach the comparison), so both suites drive `expired_at` \u2014 the exported comparison \u2014 from this table.",
+    "cases": [
+      {
+        "name": "plain UTC, not yet expired",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "now": "2026-09-08T00:00:00Z",
+        "expired": false
+      },
+      {
+        "name": "plain UTC, expired",
+        "expires_at": "2020-01-01T00:00:00Z",
+        "now": "2026-09-08T00:00:00Z",
+        "expired": true
+      },
+      {
+        "name": "numeric offset, not expired",
+        "expires_at": "2099-01-01T00:00:00+00:00",
+        "now": "2026-09-08T00:00:00Z",
+        "expired": false
+      },
+      {
+        "name": "numeric offset, expired",
+        "expires_at": "2020-01-01T00:00:00+00:00",
+        "now": "2026-09-08T00:00:00Z",
+        "expired": true
+      },
+      {
+        "name": "fractional seconds, expired",
+        "expires_at": "2026-09-08T00:00:00.500Z",
+        "now": "2026-09-08T00:00:01Z",
+        "expired": true
+      },
+      {
+        "name": "fractional seconds, not expired",
+        "expires_at": "2026-09-08T00:00:01.500Z",
+        "now": "2026-09-08T00:00:01Z",
+        "expired": false
+      },
+      {
+        "name": "non-UTC offset, still in the future (01:00+02:00 == 23:00Z)",
+        "expires_at": "2026-09-08T01:00:00+02:00",
+        "now": "2026-09-07T22:30:00Z",
+        "expired": false
+      },
+      {
+        "name": "non-UTC offset that has already passed",
+        "expires_at": "2026-09-08T01:00:00+02:00",
+        "now": "2026-09-08T00:00:00Z",
+        "expired": true
+      }
+    ]
   }
 }

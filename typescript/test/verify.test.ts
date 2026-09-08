@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { canonicalize, verify } from "../src/index.ts";
+import { canonicalize, verify, expiredAt } from "../src/index.ts";
 
 const VEC = JSON.parse(readFileSync(new URL("../../vectors.json", import.meta.url), "utf8"));
 
@@ -38,4 +38,26 @@ test("the real verdict is signed by the key we publish", () => {
   // failed. scripts/check_live.py --vectors is the online half of this check.
   const kids = new Set(VEC.jwks.keys.map((k: { kid: string }) => k.kid));
   assert.ok(kids.has(VEC.live.signature.kid));
+});
+
+// ── the shared cross-language tables (vectors.json) ───────────────────────────────────────────
+//
+// Both caught a real divergence between this library and the Python twin, and neither was
+// reachable from the signed payload: its largest number is 1, and expiry is checked AFTER the
+// signature, so varying expires_at there returns invalid_signature and never reaches the compare.
+
+test("canonical number rules match the shared table", () => {
+  // Python special-cased int and emitted exact digits while this side ran every number through ES6
+  // on a double. Above 2^53 the two produced different canonical bytes for the same document.
+  for (const c of VEC.canonical_only.cases) {
+    assert.equal(canonicalize(c.value), c.canonical, c.name);
+  }
+});
+
+test("expiry rules match the shared table", () => {
+  // Both libraries compared ISO strings lexicographically. "+00:00" sorts before "Z", so an
+  // offset-form expiry read as unexpired for the rest of the century.
+  for (const c of VEC.expiry.cases) {
+    assert.equal(expiredAt(c.expires_at, new Date(c.now)), c.expired, c.name);
+  }
 });

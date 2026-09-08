@@ -37,3 +37,27 @@ def test_the_real_verdict_is_signed_by_the_key_we_publish():
     signature names, the tests above would still pass against the stale copy while every real
     reviewer failed. scripts/check_live.py --vectors is the online half of this check."""
     assert VEC["live"]["signature"]["kid"] in {k["kid"] for k in VEC["jwks"]["keys"]}
+
+
+# ── the shared cross-language tables (vectors.json) ───────────────────────────────────────────
+#
+# Both of these caught a real divergence between this library and the TypeScript twin, and neither
+# was reachable from the signed `payload`: its largest number is 1, and expiry is checked AFTER the
+# signature, so varying expires_at there returns invalid_signature and never reaches the comparison.
+
+def test_canonical_number_rules_match_the_shared_table():
+    # Python special-cased `int` and emitted exact digits; TypeScript ran every number through ES6
+    # on an IEEE-754 double. Above 2^53 the two produced different canonical bytes for the same
+    # document, so one library would call a Verdict valid and the other invalid_signature.
+    for c in VEC["canonical_only"]["cases"]:
+        assert canonicalize(c["value"]) == c["canonical"], c["name"]
+
+
+def test_expiry_rules_match_the_shared_table():
+    # Both libraries compared ISO strings lexicographically. "+00:00" sorts before "Z", so an
+    # offset-form expiry read as unexpired for the rest of the century.
+    from datetime import datetime
+    from hs_verify import expired_at
+    for c in VEC["expiry"]["cases"]:
+        now = datetime.fromisoformat(c["now"].replace("Z", "+00:00"))
+        assert expired_at(c["expires_at"], now) is c["expired"], c["name"]
