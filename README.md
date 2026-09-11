@@ -12,10 +12,7 @@
 > | `vectors.json` | signed with the **production key** (`kid` `2026-q3`). `python scripts/check_live.py --vectors` reports `LIVE` |
 >
 > Everything offline works now: both verifiers agree byte for byte on the shared vectors, and
-> the canonical form and the signature check are the ones production will use. What is waiting
-> is the engine deploy that publishes the JWKS and re-cuts the vectors with the live key.
->
-> This notice comes down when the JWKS is live and the packages are published.
+> the canonical form and the signature check are the ones production uses.
 
 
 Keyless verification of a **Hunter-Seeker Verdict** — the signed decision an AI agent receives
